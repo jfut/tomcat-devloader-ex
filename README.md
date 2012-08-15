@@ -11,6 +11,15 @@ This provides extra features for Tomcat DevLoader of [Sysdeo Eclipse Tomcat Laun
 * Exclude specific jar files at launching Eclipse Tomcat Launcher.
 * Add class path to java.class.path.
 
+Build
+-----
+
+You can execute it using the command below:
+
+<pre>
+mvn package
+</pre>
+
 Installation
 ------------
 
