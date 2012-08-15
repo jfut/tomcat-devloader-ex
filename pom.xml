@@ -4,6 +4,16 @@
   <artifactId>devloader-ex</artifactId>
   <packaging>jar</packaging>
   <version>3.3</version>
+  <developers>
+    <developer>
+      <id>jfut</id>
+      <name>Jun Futagawa</name>
+      <email></email>
+      <url>http://jfut.integ.jp/</url>
+      <organization></organization>
+      <timezone>+9</timezone>
+    </developer>
+  </developers>
   <build>
     <defaultGoal>validate</defaultGoal>
     <pluginManagement>
