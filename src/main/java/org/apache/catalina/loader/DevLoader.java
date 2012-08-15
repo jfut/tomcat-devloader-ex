@@ -28,6 +28,7 @@ public class DevLoader extends WebappLoader {
 
 	private String webClassPathFile = ".#webclasspath";
 	private String tomcatPluginFile = ".tomcatplugin";
+	private String devloaderConfFile = "conf/devloader.conf";
 	
 	public DevLoader() {
 		super();		
@@ -53,6 +54,7 @@ public class DevLoader extends WebappLoader {
 		WebappClassLoader devCl = (WebappClassLoader) cl;
 		
 		List webClassPathEntries = readWebClassPathEntries();
+		List excludeWebClassPathEntries = readExcludeWebClassPathEntries();
 		StringBuffer classpath   = new StringBuffer();
 		for (Iterator it = webClassPathEntries.iterator(); it.hasNext();) {
 			String entry = (String) it.next();
@@ -61,6 +63,19 @@ public class DevLoader extends WebappLoader {
 				if (f.isDirectory() && entry.endsWith("/")==false) f = new File(entry + "/");
 				try {
 					URL url = f.toURL();
+					boolean excludeJar = false;
+					for (Iterator iterator = excludeWebClassPathEntries.iterator(); iterator
+							.hasNext();) {
+						String excludeEntry = (String) iterator.next();
+	                    if (url.toString().matches(excludeEntry)) {
+	                    	excludeJar = true;
+	                    	break;
+	                    }
+					}
+					if (excludeJar) {
+						log("skipped " + url.toString());
+                        continue;
+					}
 					//devCl.addUrl(url);
 					devCl.addRepository(url.toString());
 					classpath.append(f.toString() + File.pathSeparatorChar);
@@ -94,6 +109,18 @@ public class DevLoader extends WebappLoader {
 		//cp = classpath + cp;
 		getServletContext().setAttribute(Globals.CLASS_PATH_ATTR, classpath.toString());
 		log("JSPCompiler Classpath = " + classpath);
+		// system class path for some framework
+		String systemClassPath = System.getProperty("java.class.path");
+		String originalSystemClassPath = System.getProperty("java.class.path.devloader");
+		if (originalSystemClassPath == null) {
+			System.setProperty("java.class.path.devloader", systemClassPath);			
+		} else {
+			systemClassPath = originalSystemClassPath;
+		}
+		log("original system Classpath: " + systemClassPath);
+		systemClassPath = systemClassPath + File.pathSeparatorChar + classpath.toString();
+		System.setProperty("java.class.path", systemClassPath);
+		log("temporary system Classpath: " + System.getProperty("java.class.path"));
 	}
 	
 	protected void log(String msg) {
@@ -195,6 +222,41 @@ public class DevLoader extends WebappLoader {
 		}
 	}
 */	
+	
+	protected List readExcludeWebClassPathEntries() {
+		String catalinaBase = System.getProperty("catalina.base");
+		File confFile = new File(catalinaBase, devloaderConfFile);
+		List re = new ArrayList();
+		if (! confFile.exists()) {
+			log("notice: " + confFile.toString() + " is not found.");
+			log("notice: use default settings");
+			// Tomcat
+			re.add("(.*)/servlet-api(.*).jar");
+			re.add("(.*)/jsp-api(.*).jar");
+			// Geronimo
+			re.add("(.*)/geronimo-jsp(.*).jar");
+			re.add("(.*)/geronimo-servlet(.*).jar");
+		} else {
+			FileReader reader = null;
+			try {
+				reader = new FileReader(confFile);
+				LineNumberReader lr = new LineNumberReader(reader);
+				String line = null;
+				while((line = lr.readLine()) != null) {
+					// convert '\' to '/'
+					line = line.replace('\\', '/');
+					if (line.length() > 0 && line.charAt(0) != '#') {
+						re.add(line);
+					}
+				}
+			} catch(IOException ioEx) {
+				if (reader != null) try { reader.close(); } catch(Exception ignored) {}
+				return null;
+			}
+		}
+		return re;
+	}
+	
 	protected ServletContext getServletContext() {
 		return ((Context) getContainer()).getServletContext();
 	}
